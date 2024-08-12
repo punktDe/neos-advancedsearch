@@ -19,12 +19,9 @@ class SuggestController extends ActionController
 {
     use CreateContentContextTrait;
 
-    protected ElasticSearchClient $elasticSearchClient;
+    private ?ElasticSearchClient $elasticSearchClient;
 
-    /**
-     * @var ElasticSearchQueryBuilder
-     */
-    protected ElasticSearchQueryBuilder $elasticSearchQueryBuilder;
+    private ?ElasticSearchQueryBuilder $elasticSearchQueryBuilder;
 
     /**
      * @var string[]

@@ -4,3 +4,6 @@ Neos:
       routes:
         'PunktDe.Neos.AdvancedSearch':
           position: 'before Neos.Neos'
+  Fusion:
+    defaultContext:
+      NodeAddress: PunktDe\Neos\AdvancedSearch\Eel\NodeAddressHelper

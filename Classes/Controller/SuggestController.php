@@ -16,7 +16,6 @@ use Neos\ContentRepositoryRegistry\ContentRepositoryRegistry;
 use Neos\Flow\Annotations as Flow;
 use Neos\Flow\Mvc\Controller\ActionController;
 use Neos\Flow\Mvc\View\JsonView;
-use Neos\Flow\Persistence\Exception\IllegalObjectTypeException;
 
 class SuggestController extends ActionController
 {
@@ -37,10 +36,15 @@ class SuggestController extends ActionController
     #[Flow\InjectConfiguration(path: "searchAsYouType", package: "Flowpack.SearchPlugin")]
     protected array $searchAsYouTypeSettings = [];
 
+    /**
+     * @Flow\Inject
+     * @var VariableFrontend
+     */
+    protected $elasticSearchQueryTemplateCache;
+
     public function __construct(
         private readonly SuggestionContextInterface $suggestionContext,
         private readonly ContentRepositoryRegistry $contentRepositoryRegistry,
-        private readonly VariableFrontend $elasticSearchQueryTemplateCache,
     ) {
     }
 
@@ -53,7 +57,6 @@ class SuggestController extends ActionController
     }
 
     /**
-     * @throws IllegalObjectTypeException
      * @throws QueryBuildingException
      * @throws \JsonException
      */
@@ -90,7 +93,6 @@ class SuggestController extends ActionController
 
     /**
      * @throws QueryBuildingException
-     * @throws IllegalObjectTypeException
      * @throws \JsonException
      */
     protected function buildRequestForTerm(string $term, NodeAddress $contextNodeAddress): string

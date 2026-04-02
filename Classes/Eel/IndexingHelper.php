@@ -5,60 +5,59 @@ namespace PunktDe\Neos\AdvancedSearch\Eel;
 
 use Flowpack\SearchPlugin\EelHelper\SuggestionIndexHelper;
 use Flowpack\SearchPlugin\Exception;
-use Neos\ContentRepository\Domain\Model\NodeInterface;
-use Neos\ContentRepository\Exception\NodeException;
+use Neos\ContentRepository\Core\Projection\ContentGraph\Node;
+use Neos\Neos\Domain\SubtreeTagging\NeosSubtreeTag;
 use Neos\Eel\ProtectedContextAwareInterface;
 use PunktDe\Neos\AdvancedSearch\NodeTypeDefinitionInterface;
 use PunktDe\Neos\AdvancedSearch\TextTokenizer;
-
+use Neos\ContentRepositoryRegistry\ContentRepositoryRegistry;
 
 class IndexingHelper implements ProtectedContextAwareInterface
 {
-
     public function __construct(
         private readonly TextTokenizer         $textTokenizer,
         private readonly SuggestionIndexHelper $suggestionIndexHelper,
+        private readonly ContentRepositoryRegistry $contentRepositoryRegistry,
     ) {
     }
 
     /**
-     * @param NodeInterface $node
+     * @param Node $node
      * @param string[] $properties
      * @return string
-     * @throws NodeException
      */
-    public function indexCompletionIfSearchable(NodeInterface $node, array $properties): string
+    public function indexCompletionIfSearchable(Node $node, array $properties): string
     {
-        if ($node->getNodeType()->isOfType(NodeTypeDefinitionInterface::MIXIN_HIDDEN_FROM_INTERNAL_SEARCH)) {
+        $contentRepository = $this->contentRepositoryRegistry->get($node->contentRepositoryId);
+        if ($contentRepository->getNodeTypeManager()->getNodeType($node->nodeTypeName)->isOfType(NodeTypeDefinitionInterface::MIXIN_HIDDEN_FROM_INTERNAL_SEARCH)) {
             return '';
         }
 
-        return implode(' ', $this->stopWordFilteredTokenize(implode(' ',$this->extractNodeProperties($properties, $node)), $node));
+        return implode(' ', $this->stopWordFilteredTokenize(implode(' ', $this->extractNodeProperties($properties, $node)), $node));
     }
 
     /**
-     * @param NodeInterface $node
+     * @param Node $node
      * @param string[] $properties
      * @param int $weight
      * @return string[]
-     * @throws NodeException
      * @throws Exception
      */
-    public function indexSuggestionIfSearchable(NodeInterface $node, array $properties, int $weight = 1): array
+    public function indexSuggestionIfSearchable(Node $node, array $properties, int $weight = 1): array
     {
-        if ($node->isHidden() || $node->getNodeType()->isOfType(NodeTypeDefinitionInterface::MIXIN_HIDDEN_FROM_INTERNAL_SEARCH)) {
+        $contentRepository = $this->contentRepositoryRegistry->get($node->contentRepositoryId);
+        if ($node->tags->contain(NeosSubtreeTag::disabled()) || $contentRepository->getNodeTypeManager()->getNodeType($node->nodeTypeName)->isOfType(NodeTypeDefinitionInterface::MIXIN_HIDDEN_FROM_INTERNAL_SEARCH)) {
             return [];
         }
-        return $this->suggestionIndexHelper->build($this->stopWordFilteredTokenize(implode(' ',$this->extractNodeProperties($properties, $node)), $node), $weight);
+        return $this->suggestionIndexHelper->build($this->stopWordFilteredTokenize(implode(' ', $this->extractNodeProperties($properties, $node)), $node), $weight);
     }
 
     /**
      * @param string[] $properties
-     * @param NodeInterface $node
+     * @param Node $node
      * @return string[]
-     * @throws NodeException
      */
-    private function extractNodeProperties(array $properties, NodeInterface $node): array
+    private function extractNodeProperties(array $properties, Node $node): array
     {
         $completionContent = [];
 
@@ -72,13 +71,14 @@ class IndexingHelper implements ProtectedContextAwareInterface
 
     /**
      * @param string $input
-     * @param NodeInterface $node
+     * @param Node $node
      * @return string[]
      */
-    public function stopWordFilteredTokenize(string $input, NodeInterface $node): array
+    public function stopWordFilteredTokenize(string $input, Node $node): array
     {
-        $language = current($node->getContext()->getDimensions()['language'] ?? ['']);
-        if ($language === '') {
+        $languageCoord = $node->dimensionSpacePoint->coordinates['language'] ?? '';
+        $language = is_array($languageCoord) ? current($languageCoord) : $languageCoord;
+        if (empty($language)) {
             return [];
         }
 

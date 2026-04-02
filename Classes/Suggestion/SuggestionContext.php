@@ -3,22 +3,25 @@ declare(strict_types=1);
 
 namespace PunktDe\Neos\AdvancedSearch\Suggestion;
 
-use Neos\ContentRepository\Domain\Model\NodeInterface;
-use \Flowpack\SearchPlugin\Suggestion\SuggestionContext as FlowpackSuggestionContext;
+use Neos\Flow\Annotations as Flow;
+use Flowpack\SearchPlugin\Suggestion\SuggestionContext as FlowpackSuggestionContext;
+use Neos\ContentRepository\Core\Projection\ContentGraph\Node;
+use Neos\ContentRepositoryRegistry\ContentRepositoryRegistry;
+use Neos\Neos\Domain\SubtreeTagging\NeosSubtreeTag;
 
 class SuggestionContext extends FlowpackSuggestionContext
 {
-
-    public function buildForIndex(NodeInterface $node): self
+    public function buildForIndex(Node $node): self
     {
         $this->contextValues = [
             'siteName' => $this->getSiteName($node),
-            'workspace' => $node->getWorkspace()->getName(),
+            'workspace' => $node->workspaceName->value,
         ];
+        $contentRepository = $this->contentRepositoryRegistry->get($node->contentRepositoryId);
 
-        if ($node->isHidden() ||
+        if ($node->tags->contain(NeosSubtreeTag::disabled()) ||
             (bool)$node->getProperty('metaRobotsNoindex') === true ||
-            $node->getNodeType()->isOfType('PunktDe.Neos.AdvancedSearch:Mixin.HiddenFromInternalSearch') ||
+            $contentRepository->getNodeTypeManager()->getNodeType($node->nodeTypeName)->isOfType('PunktDe.Neos.AdvancedSearch:Mixin.HiddenFromInternalSearch') ||
             (bool)$node->getProperty('internalSearchNoIndex') === true
         ) {
             $this->contextValues['isHidden'] = 'hidden';

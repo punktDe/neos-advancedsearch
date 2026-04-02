@@ -26,6 +26,14 @@ class DetermineConfigurationAspect
     protected $searchClient;
 
     /**
+     * Optional per-dimension index configuration. If not configured, falls back to generic settings key.
+     * Structure: [bundle => [languageSpecificConfigurationKey => config]]
+     *
+     * @var array<string, array<string, mixed>>
+     */
+    protected array $indexConfiguration = [];
+
+    /**
      * @Flow\Around("method(Flowpack\ElasticSearch\ContentRepositoryAdaptor\Indexer\NodeIndexer->getIndex())")
      *
      * @param JoinPointInterface $joinPoint The current joinPoint
